@@ -1,0 +1,18 @@
+Changes
+MANIFEST
+MANIFEST.SKIP
+lib/Nitesi.pm
+lib/Nitesi/Account/Manager.pm
+lib/Nitesi/Account/Provider/DBI.pm
+lib/Nitesi/Cart.pm
+lib/Nitesi/Class.pm
+lib/Nitesi/Object.pm
+lib/Nitesi/Object/Singleton.pm
+Makefile.PL
+README
+t/001_base.t
+t/003_cart.t
+t/manifest.t
+t/pod.t
+t/pod-coverage.t
+META.yml                                 Module meta-data (added by MakeMaker)
