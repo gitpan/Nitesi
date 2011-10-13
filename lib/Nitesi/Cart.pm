@@ -9,7 +9,7 @@ use constant CART_DEFAULT => 'main';
 
 =head1 NAME 
 
-Nitesi::Cart
+Nitesi::Cart - Cart class for Nitesi Shop Machine
 
 =head1 VERSION
 
@@ -25,7 +25,10 @@ sub new {
     $class = shift;
     %args = @_;
 
-    $self = {error => '', items => [], modifiers => []};
+    $self = {error => '', items => [], modifiers => [],
+	     costs => [], subtotal => 0, total => 0, 
+	     cache_subtotal => 1, cache_total => 1,
+    };
 
     if ($args{name}) {
 	$self->{name} = $args{name};
@@ -72,6 +75,30 @@ sub items {
     return $self->{items};
 }
 
+=head2 subtotal
+
+Returns subtotal of the cart.
+
+=cut
+
+sub subtotal {
+    my ($self) = shift;
+
+    if ($self->{cache_subtotal}) {
+	return $self->{subtotal};
+    }
+
+    $self->{subtotal} = 0;
+
+    for my $item (@{$self->{items}}) {
+	$self->{subtotal} += $item->{price} * $item->{quantity};
+    }
+
+    $self->{cache_subtotal} = 1;
+
+    return $self->{subtotal};
+}
+
 =head2 total
 
 Returns total of the cart.
@@ -80,13 +107,27 @@ Returns total of the cart.
 
 sub total {
     my ($self) = shift;
-    my $total = 0;
+    my ($subtotal);
 
-    for my $item (@{$self->{items}}) {
-	$total += $item->{price} * $item->{quantity};
+    if ($self->{cache_total}) {
+	return $self->{total};
     }
 
-    return $total;
+    $self->{total} = $subtotal = $self->subtotal();
+
+    # calculate costs
+    for my $calc (@{$self->{costs}}) {
+	if ($calc->{relative}) {
+	    $self->{total} = $subtotal * $calc->{amount};
+        }
+	else {
+	    $self->{total} += $calc->{amount};
+	}
+    }
+
+    $self->{cache_total} = 1;
+
+    return $self->{total};
 }
  
 =head2 add $item
@@ -126,14 +167,8 @@ sub add {
     # copy item
     %item = %{$item_ref};
 
-    # run hooks before adding item to cart
-    $self->_run_hook('before_cart_add', $self, \%item);
-
-    if (exists $item{error}) {
-	# one of the hooks denied the item
-	$self->{error} = $item{error};
-	return;
-    }
+    # run hooks before validating item
+    $self->_run_hook('before_cart_add_validate', $self, \%item);
 
     # validate item
     unless (exists $item{sku} && defined $item{sku} && $item{sku} =~ /\S/) {
@@ -161,6 +196,18 @@ sub add {
 	$self->{error} = "Item $item{sku} added with invalid price.";
 	return;
     }
+  
+    # run hooks before adding item to cart
+    $self->_run_hook('before_cart_add', $self, \%item);
+
+    if (exists $item{error}) {
+	# one of the hooks denied the item
+	$self->{error} = $item{error};
+	return;
+    }
+
+    # clear cache flags
+    $self->{cache_subtotal} = $self->{cache_total} = 0;
 
     unless ($ret = $self->_combine(\%item)) {
 	push @{$self->{items}}, \%item;
@@ -182,6 +229,11 @@ sub remove {
     my ($self, $arg) = @_;
     my ($pos, $found, $item);
 
+    $pos = 0;
+  
+    # run hooks before locating item
+    $self->_run_hook('before_cart_remove_validate', $self, $arg);
+
     for $item (@{$self->{items}}) {
 	if ($item->{sku} eq $arg) {
 	    $found = 1;
@@ -201,6 +253,9 @@ sub remove {
 	    $self->{error} = $item->{error};
 	    return;
 	}
+
+	# clear cache flags
+	$self->{cache_subtotal} = $self->{cache_total} = 0;
 
 	# removing item from our array
 	splice(@{$self->{items}}, $pos, 1);
@@ -225,6 +280,69 @@ sub clear {
     my ($self) = @_;
 
     $self->{items} = [];
+
+    # reset subtotal/total
+    $self->{subtotal} = 0;
+    $self->{total} = 0;
+    $self->{cache_subtotal} = 1;
+    $self->{cache_total} = 1;
+
+    return;
+}
+
+=head2 apply_cost 
+
+Apply cost to cart.
+
+Absolute cost:
+
+    $cart->apply_cost(amount => 5, name => 'fee', label => 'Pickup Fee');
+
+Relative cost:
+
+    $cart->apply_cost(amount => 0.19, name => 'tax', label => Sales Tax,
+                      relative => 1);
+
+=cut
+
+sub apply_cost {
+    my ($self, %args) = @_;
+
+    push @{$self->{costs}}, \%args;
+
+    # clear cache for total
+    $self->{cache_total} = 0;
+}
+
+=head2 clear_cost
+
+Clear costs.
+
+=cut
+
+sub clear_cost {
+    my $self = shift;
+
+    $self->{costs} = [];
+
+    $self->{cache_total} = 0;
+}
+
+=head2 id
+
+Get or set id of the cart. This can be used for subclasses, 
+e.g. primary key value for carts in the database.
+
+=cut
+
+sub id {
+    my $self = shift;
+
+    if (@_ > 0) {
+	$self->{id} = $_[0];
+    }
+
+    return $self->{id};
 }
 
 =head2 name
@@ -266,6 +384,9 @@ sub seed {
 
     @{$self->{items}} = @{$item_ref || []};
 
+    # clear cache flags
+    $self->{cache_subtotal} = $self->{cache_total} = 0;
+
     return $self->{items};
 }
 
@@ -296,5 +417,21 @@ sub _run_hook {
 
     return $ret;
 }
+
+=head1 AUTHOR
+
+Stefan Hornburg (Racke), <racke@linuxia.de>
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright 2011 Stefan Hornburg (Racke) <racke@linuxia.de>.
+
+This program is free software; you can redistribute it and/or modify it
+under the terms of either: the GNU General Public License as published
+by the Free Software Foundation; or the Artistic License.
+
+See http://dev.perl.org/licenses/ for more information.
+
+=cut
 
 1;
