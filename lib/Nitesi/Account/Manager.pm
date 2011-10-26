@@ -115,7 +115,9 @@ sub login {
     for my $p (@providers) {
 	if ($acct = $p->login(%args)) {
 	    $self->{session_sub}->('init', $acct);
+	    $self->{account} = $acct;
 	    $success = 1;
+	    last;
 	}
     }
 
@@ -170,6 +172,18 @@ sub roles {
     my $self = shift;
 
     wantarray ? @{$self->{account}->{roles}} : $self->{account}->{roles};
+}
+
+=head2 has_role
+
+Returns true if user is a member of the given role.
+
+=cut
+
+sub has_role {
+    my ($self, $role) = @_;
+
+    grep {$role eq $_} @{$self->{account}->{roles}};
 }
 
 =head2 status
@@ -272,7 +286,23 @@ Retrieve account data.
 =cut
 
 sub value {
-    my ($self, $name) = @_;
+    my ($self, $name, $value) = @_;
+
+    if (@_ == 3) {
+	# update value
+	my ($username, $provider);
+
+	$username = $self->{account}->{username};
+
+	unless ($provider = $self->exists($username)) {
+	    die "Cannot change value $name for user $username.";
+	}
+
+	$provider->value($username, $name, $value);
+	$self->{account} = $self->{session_sub}->('update', {$name => $value});
+
+	return $value;
+    }
 
     if (exists $self->{account}->{$name}) {
 	return $self->{account}->{$name};

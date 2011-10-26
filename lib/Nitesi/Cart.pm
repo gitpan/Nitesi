@@ -116,14 +116,7 @@ sub total {
     $self->{total} = $subtotal = $self->subtotal();
 
     # calculate costs
-    for my $calc (@{$self->{costs}}) {
-	if ($calc->{relative}) {
-	    $self->{total} = $subtotal * $calc->{amount};
-        }
-	else {
-	    $self->{total} += $calc->{amount};
-	}
-    }
+    $self->{total} += $self->_calculate($subtotal);
 
     $self->{cache_total} = 1;
 
@@ -300,8 +293,13 @@ Absolute cost:
 
 Relative cost:
 
-    $cart->apply_cost(amount => 0.19, name => 'tax', label => Sales Tax,
+    $cart->apply_cost(amount => 0.19, name => 'tax', label => 'Sales Tax',
                       relative => 1);
+
+Inclusive cost:
+
+   $cart->apply_cost(amount => 0.19, name => 'tax', label => 'Sales Tax',
+                      relative => 1, inclusive => 1);
 
 =cut
 
@@ -310,8 +308,10 @@ sub apply_cost {
 
     push @{$self->{costs}}, \%args;
 
-    # clear cache for total
-    $self->{cache_total} = 0;
+    unless ($args{inclusive}) {
+	# clear cache for total
+	$self->{cache_total} = 0;
+    }
 }
 
 =head2 clear_cost
@@ -326,6 +326,38 @@ sub clear_cost {
     $self->{costs} = [];
 
     $self->{cache_total} = 0;
+}
+
+=head2 cost
+
+Returns particular cost by position or by name.
+
+=cut
+
+sub cost {
+    my ($self, $loc) = @_;
+    my ($cost, $ret);
+
+    if (defined $loc) {
+	if ($loc =~ /^\d+/) {
+	    # cost by position
+	    $cost = $self->{costs}->[$loc];
+	}
+	elsif ($loc =~ /\S/) {
+	    # cost by name
+	    for my $c (@{$self->{costs}}) {
+		if ($c->{name} eq $loc) {
+		    $cost = $c;
+		}
+	    }
+	}
+    }
+
+    if (defined $cost) {
+	$ret = $self->_calculate($self->{subtotal}, $cost, 1);
+    }
+
+    return $ret;
 }
 
 =head2 id
@@ -405,6 +437,38 @@ sub _combine {
     }
 
     return;
+}
+
+sub _calculate {
+    my ($self, $subtotal, $costs, $display) = @_;
+    my ($cost_ref, $sum);
+
+    if (ref $costs eq 'HASH') {
+	$cost_ref = [$costs];
+    }
+    elsif (ref $costs eq 'ARRAY') {
+	$cost_ref = $costs;
+    }
+    else {
+	$cost_ref = $self->{costs};
+    }
+
+    $sum = 0;
+
+    for my $calc (@$cost_ref) {
+	if ($calc->{inclusive} && ! $display) {
+	    next;
+	}
+
+	if ($calc->{relative}) {
+	    $sum += $subtotal * $calc->{amount};
+        }
+	else {
+	    $sum += $calc->{amount};
+	}
+    }
+
+    return $sum;
 }
 
 sub _run_hook {
