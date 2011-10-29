@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Nitesi
-version:            0.0020
+version:            0.0030
 abstract:           Open Source Shop Machine
 author:
     - Stefan Hornburg (Racke) <racke@linuxia.de>
