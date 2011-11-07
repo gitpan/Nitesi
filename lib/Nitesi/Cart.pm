@@ -272,7 +272,13 @@ Removes all items from the cart.
 sub clear {
     my ($self) = @_;
 
+    # run hook before clearing the cart
+    $self->_run_hook('before_cart_clear', $self);
+    
     $self->{items} = [];
+
+    # run hook after clearing the cart
+    $self->_run_hook('after_cart_clear', $self);
 
     # reset subtotal/total
     $self->{subtotal} = 0;
@@ -387,7 +393,13 @@ sub name {
     my $self = shift;
 
     if (@_ > 0) {
+	my $old_name = $self->{name};
+
+	$self->_run_hook('before_cart_rename', $self, $old_name, $_[0]);
+
 	$self->{name} = $_[0];
+
+	$self->_run_hook('after_cart_rename', $self, $old_name, $_[0]);
     }
 
     return $self->{name};
