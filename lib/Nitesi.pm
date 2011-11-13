@@ -6,15 +6,18 @@ Nitesi - Open Source Shop Machine
 
 =head1 VERSION
 
-0.0031
+0.0032
 
 =cut
 
-our $VERSION = '0.0031';
+our $VERSION = '0.0032';
 
 =head1 DESCRIPTION
 
-The Nitesi API is provided by the following classes:
+Nitesi, the Open Source Shop Machine, is the Modern Perl ecosystem
+for online business.
+
+This module provides APIs for carts and account management:
 
 =over 4
 
@@ -27,6 +30,9 @@ L<Nitesi::Cart>
 L<Nitesi::Account::Manager>
 
 =back
+
+To build your own business website, please take a look at
+our Dancer plugin: L<Dancer::Plugin::Nitesi>.
 
 =head1 CAVEATS
 
