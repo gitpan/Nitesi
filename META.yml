@@ -21,4 +21,4 @@ requires:
   ACL::Lite: 0.0001
   Crypt::Password: 0
   Test::More: 0
-version: 0.0032
+version: 0.0033
