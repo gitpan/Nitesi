@@ -19,6 +19,6 @@ no_index:
     - inc
 requires:
   ACL::Lite: 0.0001
-  Crypt::Password: 0
+  Crypt::Password: 0.23
   Test::More: 0
-version: 0.0033
+version: 0.0034
