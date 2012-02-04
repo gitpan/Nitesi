@@ -6,11 +6,11 @@ Nitesi - Open Source Shop Machine
 
 =head1 VERSION
 
-0.0034
+0.0040
 
 =cut
 
-our $VERSION = '0.0034';
+our $VERSION = '0.0040';
 
 =head1 DESCRIPTION
 
@@ -33,6 +33,11 @@ L<Nitesi::Account::Manager>
 
 To build your own business website, please take a look at
 our Dancer plugin: L<Dancer::Plugin::Nitesi>.
+
+=head1 CART
+
+Nitesi supports multiple carts, automatic collapsing of similar items
+and price caching.
 
 =head1 CAVEATS
 
@@ -82,7 +87,7 @@ L<http://search.cpan.org/dist/Nitesi/>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2011 Stefan Hornburg (Racke).
+Copyright 2011-2012 Stefan Hornburg (Racke).
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published

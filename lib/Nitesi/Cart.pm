@@ -11,7 +11,33 @@ use constant CART_DEFAULT => 'main';
 
 Nitesi::Cart - Cart class for Nitesi Shop Machine
 
-=head1 VERSION
+=head1 DESCRIPTION
+
+Generic cart class for L<Nitesi>.
+
+=head2 CART ITEMS
+
+Each item in the cart has at least the following attributes:
+
+=over 4
+
+=item sku
+
+Unique item identifier.
+
+=item name
+
+Item name.
+
+=item quantity
+
+Item quantity.
+
+=item price
+
+Item price.
+
+=back
 
 =head1 CONSTRUCTOR
 
@@ -127,7 +153,7 @@ sub total {
 
 Add item to the cart. Returns item in case of success.
 
-The item is a hash reference which is subject to the following
+The item is a hash (reference) which is subject to the following
 conditions:
 
 =over 4
@@ -154,11 +180,16 @@ Item price is required and a positive number.
 =cut
 
 sub add {
-    my ($self, $item_ref) = @_;
+    my $self = shift;
     my (%item, $ret);
 
-    # copy item
-    %item = %{$item_ref};
+    if (ref($_[0])) {
+	# copy item
+	%item = %{$_[0]};
+    }
+    else {
+	%item = @_;
+    }
 
     # run hooks before validating item
     $self->_run_hook('before_cart_add_validate', $self, \%item);
@@ -263,6 +294,49 @@ sub remove {
     return;
 }
 
+=head2 update
+
+Update items in the cart.
+
+Parameters are pairs of SKUs and quantities, e.g.
+
+    $cart->update(9780977920174 => 5,
+                  9780596004927 => 3);
+
+=cut
+
+sub update {
+    my ($self, @args) = @_;
+    my ($ref, $sku, $qty, $item, $new_item);
+
+    while (@args > 0) {
+	$sku = shift @args;
+	$qty = shift @args;
+
+	unless ($item = $self->_find($sku)) {
+	    die "Item for $sku not found in cart.\n";
+	}
+
+	# jump to next item if quantity stays the same
+	next if $qty == $item->{quantity};
+
+	# run hook before updating the cart
+	$new_item = {quantity => $qty};
+
+	$self->_run_hook('before_cart_update', $self, $item, $new_item);
+
+	if (exists $new_item->{error}) {
+	    # one of the hooks denied the item
+	    $self->{error} = $new_item->{error};
+	    return;
+	}
+
+	$self->_run_hook('after_cart_update', $self, $item, $new_item);
+
+	$item->{quantity} = $qty;
+    }
+}
+
 =head2 clear
 
 Removes all items from the cart.
@@ -289,13 +363,45 @@ sub clear {
     return;
 }
 
+=head2 quantity
+
+Returns the sum of the quantity of all items in the shopping cart,
+which is commonly used as number of items.
+
+    print 'Items in your cart: ', $cart->quantity, "\n";
+
+=cut
+
+sub quantity {
+    my $self = shift;
+    my $qty = 0;
+
+    for my $item (@{$self->{items}}) {
+	$qty += $item->{quantity};
+    }
+
+    return $qty;
+}
+
+=head2 count
+
+Returns the number of different items in the shopping cart.
+
+=cut
+
+sub count {
+    my $self = shift;
+
+    return scalar(@{$self->{items}});
+}
+
 =head2 apply_cost 
 
 Apply cost to cart.
 
 Absolute cost:
 
-    $cart->apply_cost(amount => 5, name => 'fee', label => 'Pickup Fee');
+    $cart->apply_cost(amount => 5, name => 'shipping', label => 'Shipping');
 
 Relative cost:
 
@@ -434,6 +540,18 @@ sub seed {
     return $self->{items};
 }
 
+sub _find {
+    my ($self, $sku) = @_;
+
+    for my $cartitem (@{$self->{items}}) {
+	if ($sku eq $cartitem->{sku}) {
+	    return $cartitem;
+        }
+    }
+
+    return;
+}
+
 sub _combine {
     my ($self, $item) = @_;
 
@@ -502,7 +620,7 @@ Stefan Hornburg (Racke), <racke@linuxia.de>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2011 Stefan Hornburg (Racke) <racke@linuxia.de>.
+Copyright 2011-2012 Stefan Hornburg (Racke) <racke@linuxia.de>.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
