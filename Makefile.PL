@@ -15,6 +15,8 @@ WriteMakefile(
         'Test::More' => 0,
 	'ACL::Lite'  => 0.0001,
         'Crypt::Password' => 0.23,
+        'Data::SimplePassword' => 0,
+	'Moo' => 0.091004,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Nitesi-*' },

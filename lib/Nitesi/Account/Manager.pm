@@ -3,7 +3,7 @@ package Nitesi::Account::Manager;
 use strict;
 use warnings;
 
-use base 'Nitesi::Object::Singleton';
+use base 'Nitesi::Object';
 
 use Nitesi::Class;
 use Nitesi::Account::Password;
@@ -30,10 +30,13 @@ Nitesi::Account::Manager - Account Manager for Nitesi Shop Machine
     if ($acct->exists('shopper@nitesi.biz')) {
         $acct->password(username => 'shopper@nitesi.biz', password => 'nevairbe');
     }
-    
-=cut
 
-my @providers;
+    $acct->create(email => 'shopper@nitesi.biz');
+
+    # use this with caution!
+    $acct->become('shopper@nitesi.biz');
+
+=cut
 
 =head1 METHODS
 
@@ -44,11 +47,12 @@ Initializer called by instance class method.
 =cut
 
 sub init {
-    my ($class, $instance, %args) = @_;
+    my ($self, %args) = @_;
     my ($ret, @list, $init);
 
-    $instance->{password} = Nitesi::Account::Password->instance;
-
+    $self->{password} = Nitesi::Account::Password->instance;
+    $self->{providers} = [];
+    
     if ($args{provider_sub}) {
 	# retrieve list of providers
 	$ret = $args{provider_sub}->();
@@ -63,15 +67,15 @@ sub init {
 
 	# instantiate provider objects
 	for $init (@list) {
-	    push @providers, Nitesi::Class->instantiate(@$init, crypt => $instance->{password});
+	    push @{$self->{providers}}, Nitesi::Class->instantiate(@$init, crypt => $self->{password});
 	}
     }
 
     if ($args{session_sub}) {
-	$instance->{session_sub} = $args{session_sub};
+        $self->{session_sub} = $args{session_sub};
     }
     else {
-	$instance->{session_sub} = sub {return 1;};
+        $self->{session_sub} = sub {return 1;};
     }
 }
 
@@ -112,7 +116,7 @@ sub login {
     $args{password} =~ s/^\s+//;
     $args{password} =~ s/\s+$//;
 
-    for my $p (@providers) {
+    for my $p (@{$self->{providers}}) {
 	if ($acct = $p->login(%args)) {
 	    $self->{session_sub}->('init', $acct);
 	    $self->{account} = $acct;
@@ -134,6 +138,73 @@ sub logout {
     my ($self, %args) = @_;
 
     $self->{session_sub}->('destroy');
+}
+
+=head2 create
+
+Create account.
+
+=cut
+
+sub create {
+    my ($self, %args) = @_;
+    my ($password, $uid);
+    
+    # remove leading/trailing spaces from arguments
+    for my $name (keys %args) {
+        if (defined $args{$name}) {
+            $args{$name} =~ s/^\s+//;
+            $args{$name} =~ s/\s+$//;
+        }
+    }
+
+    unless (exists $args{username} && $args{username} =~ /\S/) {
+        $args{username} = lc($args{email});
+    }
+
+    # password is added after account creation
+    unless ($password = delete $args{password}) {
+        $password = $self->{password}->make_password;
+    }
+
+    for my $p (@{$self->{providers}}) {
+        next unless $p->can('create');
+	
+        if ($uid = $p->create(%args)) {
+            $self->password(username => $args{username},
+                            password => $password);
+            last;
+        }
+    }
+
+    return $uid;
+}
+
+=head2 delete
+
+Delete account.
+
+=cut
+
+sub delete {
+    my ($self, $uid, $p);
+
+    $self = shift;
+
+    if (@_) {
+        $uid = shift;
+    }
+    else {
+        $uid = $self->uid;
+    }
+
+    for $p (@{$self->{providers}}) {
+        if ($p->load($uid)) {
+            return $p->delete($uid);
+        }
+    }
+
+    return;
 }
 
 =head2 uid
@@ -219,10 +290,27 @@ sub exists {
 
     return unless defined $username && $username =~ /\S/;
 
-    for my $p (@providers) {
+    for my $p (@{$self->{providers}}) {
 	if ($p->exists($username)) {
 	    return $p;
 	}
+    }
+}
+
+=head2 load
+
+Loads account data for a given uid.
+
+=cut
+
+sub load {
+    my ($self, $uid) = @_;
+    my ($data);
+
+    for my $p (@{$self->{providers}}) {
+        if ($data = $p->load($uid)) {
+            return $data;
+        }
     }
 }
 
@@ -309,7 +397,34 @@ sub value {
 	return $self->{account}->{$name};
     }
 }
+
+=head2 become
+
+Become an user:
     
+    $acct->become('shopper@nitesi.biz');
+
+Please use this method with caution.
+
+Providers may choose not to support this method.
+
+=cut
+
+sub become {
+    my ($self, $username) = @_;
+    my ($p, $acct);
+    
+    for $p (@{$self->{providers}}) {
+        if ($p->can('become')) {
+            if ($acct = $p->become($username)) {
+                $self->{session_sub}->('init', $acct);
+                $self->{account} = $acct;
+                return 1;
+            }
+        }
+    }
+}
+
 =head1 AUTHOR
 
 Stefan Hornburg (Racke), <racke@linuxia.de>
