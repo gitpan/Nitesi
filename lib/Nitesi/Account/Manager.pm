@@ -36,7 +36,10 @@ Nitesi::Account::Manager - Account Manager for Nitesi Shop Machine
     # use this with caution!
     $acct->become('shopper@nitesi.biz');
 
-=cut
+=head1 DESCRIPTION
+
+Nitesi's account manager transparently handles multiple providers for authentication,
+account data and permissions checks.
 
 =head1 METHODS
 
@@ -120,6 +123,7 @@ sub login {
 	if ($acct = $p->login(%args)) {
 	    $self->{session_sub}->('init', $acct);
 	    $self->{account} = $acct;
+        $self->{acl} = ACL::Lite->new(permissions => $self->{account}->{permissions});
 	    $success = 1;
 	    last;
 	}
@@ -419,6 +423,7 @@ sub become {
             if ($acct = $p->become($username)) {
                 $self->{session_sub}->('init', $acct);
                 $self->{account} = $acct;
+                $self->{acl} = ACL::Lite->new(permissions => $self->{account}->{permissions});
                 return 1;
             }
         }
