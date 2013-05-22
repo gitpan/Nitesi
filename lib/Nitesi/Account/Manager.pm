@@ -7,7 +7,7 @@ use base 'Nitesi::Object';
 
 use Nitesi::Class;
 use Nitesi::Account::Password;
-use ACL::Lite; 
+use ACL::Lite 0.0002;
 
 =head1 NAME
 
@@ -316,6 +316,24 @@ sub has_role {
     my ($self, $role) = @_;
 
     grep {$role eq $_} @{$self->{account}->{roles}};
+}
+
+=head2 permissions
+
+Returns permissions as hash reference:
+
+    $perms = $account->permissions;
+
+Returns permissions as list:
+
+    @perms = $account->permissions;
+
+=cut
+
+sub permissions {
+    my ($self) = @_;
+
+    return $self->{acl}->permissions;
 }
 
 =head2 status

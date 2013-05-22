@@ -40,6 +40,10 @@ Full product description.
 
 Product price.
 
+=item uri
+
+Link to Product.
+
 =item weight
 
 Product weight in grams.
@@ -75,6 +79,10 @@ has description => (
 );
 
 has price => (
+    is => 'rw',
+);
+
+has uri => (
     is => 'rw',
 );
 
