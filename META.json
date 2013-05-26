@@ -42,5 +42,10 @@
       }
    },
    "release_status" : "stable",
-   "version" : "0.0070"
+   "resources" : {
+      "repository" : {
+         "url" : "https://github.com/racke/Nitesi"
+      }
+   },
+   "version" : "0.0080"
 }

@@ -24,4 +24,6 @@ requires:
   Moo: 0.091004
   MooX::Types::MooseLike: 0.16
   Test::More: 0
-version: 0.0070
+resources:
+  repository: https://github.com/racke/Nitesi
+version: 0.0080
