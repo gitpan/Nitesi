@@ -26,18 +26,24 @@ Login method.
 
 sub login {
     my ($self, %args) = @_;
-    my ($users);
+    my ($users, $username);
 
     for (qw/username password/) {
         return unless exists $args{$_};
     }
 
     $users = $self->users;
+    $username = $args{username};
 
-    if (exists $users->{$args{username}}
-        && $args{password} eq $users->{$args{username}}->{password}) {
+    if (exists $users->{$username}
+        && $args{password} eq $users->{$username}->{password}) {
+        my $last_login = $users->{$username}->{last_login} || 0;
+
+        $users->{$username}->{last_login} = time;
+
         return {username => $args{username},
-               permissions => $users->{$args{username}}->{permissions},
+                permissions => $users->{$args{username}}->{permissions},
+                last_login => $last_login,
                };
     }
 }
@@ -55,7 +61,7 @@ Stefan Hornburg (Racke), <racke@linuxia.de>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2012 Stefan Hornburg (Racke) <racke@linuxia.de>.
+Copyright 2012-2013 Stefan Hornburg (Racke) <racke@linuxia.de>.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
