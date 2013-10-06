@@ -36,6 +36,18 @@ Navigation name.
 
 Navigation description.
 
+=item template
+
+Template used for this navigation entity.
+
+=item language
+
+Language of this navigation entity.
+
+=item alias
+
+Original navigation entity for language specific entities.
+
 =item priority
 
 The priority is used for sort navigation
@@ -78,6 +90,24 @@ has description => (
     is => 'rw',
 );
 
+has template => (
+    is => 'rw',
+    lazy => 1,
+    default => quote_sub q{return '';},
+);
+
+has language => (
+    is => 'rw',
+    lazy => 1,
+    default => quote_sub q{return '';},
+);
+
+has alias => (
+    is => 'rw',
+    lazy => 1,
+    default => quote_sub q{return 0;},
+);
+
 has parent => (
     is => 'rw',
     lazy => 1,
@@ -109,6 +139,16 @@ has uri => (
 
 =head1 METHODS
 
+=head2 api_attributes
+
+API attributes for navigation class.
+
+=cut
+
+has api_attributes => (
+    is => 'rw',
+);
+
 =head2 api_info
 
 API information for navigation class.
@@ -116,8 +156,12 @@ API information for navigation class.
 =cut
 
 sub api_info {
-    return {table => 'navigation',
+    my $self = shift;
+
+    return {base => __PACKAGE__,
+            table => 'navigation',
             key => 'code',
+            attributes => $self->api_attributes,
             assign => {'Nitesi::Product' => {
                 table => 'navigation_products',
                 key => [qw/sku navigation/]}
