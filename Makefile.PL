@@ -13,7 +13,7 @@ WriteMakefile(
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More' => 0,
-	'ACL::Lite'  => 0.0002,
+	    'ACL::Lite'  => 0.0003,
         'Crypt::Password' => 0.23,
         'Data::SimplePassword' => 0,
 	'Moo' => 0.091004,
@@ -23,7 +23,8 @@ WriteMakefile(
     clean               => { FILES => 'Nitesi-*' },
     META_MERGE        => {
         resources => {
-            repository  => 'https://github.com/racke/Nitesi',
+            repository  => 'https://github.com/interchange/Nitesi',
+            bugtracker => 'https://github.com/interchange/Nitesi/issues',
         },
     },
 );
